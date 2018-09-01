@@ -1,0 +1,28 @@
+TCPKILL(8)                                                                     System Manager's Manual                                                                    TCPKILL(8)
+
+NNAAMMEE
+       tcpkill - kill TCP connections on a LAN
+
+SSYYNNOOPPSSIISS
+       ttccppkkiillll [--ii _i_n_t_e_r_f_a_c_e] [--11...99] _e_x_p_r_e_s_s_i_o_n
+
+DDEESSCCRRIIPPTTIIOONN
+       ttccppkkiillll kills specified in-progress TCP connections (useful for libnids-based applications which require a full TCP 3-whs for TCB creation).
+
+OOPPTTIIOONNSS
+       --ii _i_n_t_e_r_f_a_c_e
+              Specify the interface to listen on.
+
+       --11...99 Specify  the  degree  of brute force to use in killing a connection. Fast connections may require a higher number in order to land a RST in the moving receive window.
+              Default is 3.
+
+       _e_x_p_r_e_s_s_i_o_n
+              Specify a tcpdump(8) filter expression to select the connections to kill.
+
+SSEEEE AALLSSOO
+       dsniff(8), tcpnice(8)
+
+AAUUTTHHOORR
+       Dug Song <dugsong@monkey.org>
+
+                                                                                                                                                                          TCPKILL(8)
