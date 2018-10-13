@@ -1,11 +1,15 @@
 TARGET=server
 CC=gcc
+
+CFLAGS=-Wall -Werror -Wextra
+LDFLAGS=
+
 SRCS=$(wildcard *.c)
 
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CC) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 .PHONY: clean
 clean:
