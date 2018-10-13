@@ -17,14 +17,12 @@ int main(void) {
 					"<body>"
 					 	"<h1>Hello,World!</h1>"
 					"</body>"
-					"</html>";
-	char http_header[2048] = "HTTP/1.1 200 OK\r\n"
-				"Connection: close\r\n"
-				"Content-Type: text/html\r\n"
-				"Content-Length: 137\r\n"
-				"\r\n ";
-	strcat(http_header, response_data);
-
+					"</html>"
+					"HTTP/1.1 200 OK\r\n"
+					"Connection: close\r\n"
+					"Content-Type: text/html\r\n"
+					"Content-Length: 137\r\n"
+					"\r\n ";
 	int server_socket;
 	if((server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		perror("Couldn't create the socket");
@@ -55,7 +53,7 @@ int main(void) {
 	int client_socket;
 	while(1){
 		client_socket = accept(server_socket, NULL, NULL);
-		send(client_socket, http_header, sizeof(http_header), 0);
+		send(client_socket, response_data, sizeof(response_data), 0);
 		close(client_socket);
 	}
 	close(server_socket);
