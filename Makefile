@@ -1,7 +1,7 @@
 TARGET=server
 CC=gcc
 
-CFLAGS=-Wall -Werror -Wextra
+CFLAGS=-Wall -Werror -Wextra -std=c99
 LDFLAGS=
 
 SRCS=$(wildcard *.c)
