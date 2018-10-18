@@ -19,7 +19,10 @@ typedef enum {
 	E_ACCES,
 	E_NFILE,
 	E_ISCONN,
-	E_ALREADY
+	E_ALREADY,
+	E_CONNABORTED,
+	E_MFILE,
+	E_PROTO
 } sock_error;
 
 
@@ -129,6 +132,43 @@ int main(void) {
 	while (1) {
 		size = sizeof(client_address);
 		client_socket = accept(server_socket, (struct sockaddr *) &client_address, &size);
+		if (client_socket == -1) {
+			if (errno == EBADF) {
+				perror("accept: The descriptor is invalid.");
+				result = E_BADF;
+				goto end;
+			}
+
+			else if (errno == ECONNABORTED) {
+				perror("accept: A connection has been aborted.");
+				result = E_CONNABORTED;
+				goto end;
+			}
+
+			else if (errno == EMFILE) {
+				perror("accept: The per-process limit of open file descriptors has been reached.");
+				result = E_MFILE;
+				goto end;
+			}
+
+			else if (errno == ENFILE) {
+				perror("accept: The system limit on the total number of open files has been reached.");
+				result = E_NFILE;
+				goto end;
+			}
+
+			else if (errno == ENOBUFS || errno == ENOMEM) {
+				perror("accept: Not enough free memory.");
+				result = E_NOBUFS;
+				goto end;
+			}
+
+			else if (errno == EPROTO){
+				perror("accept: Protocol error.");
+				result = E_PROTO;
+				goto end;
+			}
+		}
 		printf("Client conncected from: %s\n", inet_ntoa(client_address.sin_addr));
 		send(client_socket, response_data, strlen(response_data), 0);
 		close(client_socket);
