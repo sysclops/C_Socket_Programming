@@ -6,10 +6,31 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <errno.h>
+#include <arpa/inet.h>
+
+#define PORT_NUMBER (8002)
+
+typedef enum {
+	E_SUCCESS,
+	E_CREATION,
+	E_ALLOCATION,
+	E_BADF,
+	E_NOBUFS,
+	E_ACCES,
+	E_NFILE,
+	E_ISCONN,
+	E_ALREADY
+} sock_error;
+
 
 int main(void) {
-	printf("Hello!\n");
-	const char *response_data = "<!DOCTYPE html>"
+	const char *response_data = "HTTP/1.1 200 OK\r\n"
+		"Connection: close\r\n"
+		"Content-Type: text/html\r\n"
+		"Content-Length: 117\r\n"
+		"\r\n"
+
+		"<!DOCTYPE html>"
 		"<html>"
 		"<head>"
 		"<title>Hello, World! Site Title </title>"
@@ -18,42 +39,104 @@ int main(void) {
 		"<h1>Hello,World!</h1>"
 		"</body>"
 		"</html>"
-		"HTTP/1.1 200 OK\r\n"
-		"Connection: close\r\n"
-		"Content-Type: text/html\r\n"
-		"Content-Length: 137\r\n"
-		"\r\n ";
-	int server_socket;
+		"\r\n";
+
+	int server_socket = -1, client_socket = -1, enable = 1;
+	sock_error result;
+	struct sockaddr_in server_address,client_address;
+	socklen_t size;
 	if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("Couldn't create the socket");
-		return -1;
+		if (errno == EACCES){
+			perror("socket: Permission to create a socket of the specified type and/or protocol is denied.");
+			result = E_ACCES;
+			goto end;
+		}
+
+		else if (errno == ENOBUFS || errno == ENOMEM) {
+			perror("socket: Insufficient memory is available. The socket cannot be created until sufficient resources are freed.");
+			result = E_NOBUFS;
+			goto end;
+		}
+
+		else if (errno == ENFILE) {
+			perror("socket: The system limit on the total number of open files has been reached.");
+			result = E_NFILE;
+			goto end;
+		}
+
 	}
-	struct sockaddr_in server_address;
+
 	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(8002);
-	if ((server_address.sin_addr.s_addr = INADDR_ANY) == INADDR_NONE) {
-		perror("Couldn't allocate the server an address");
-		return -1;
-	}
-	int enable = 1;
-	setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int));
-	while (bind(server_socket, (struct sockaddr *) &server_address, sizeof(server_address)) != 0){
-		if (errno == EADDRINUSE) {
-			fprintf(stderr, "Waiting for: %s\n", strerror(errno));
-			sleep(1);
-		} else {
-			fprintf(stderr,"Error: %s\n", strerror(errno));
-			return -1;
+	server_address.sin_port = htons(PORT_NUMBER);
+	server_address.sin_addr.s_addr = INADDR_ANY;
+
+	if ((setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int))) < 0) {
+
+		if (errno == EBADF){
+			perror("setsockopt: The socket argument is not a valid file descriptor.");
+			result = E_BADF;
+			goto end;
+		}
+
+		else if (errno == ENOMEM || errno == ENOBUFS){
+			perror("setsockopt: There was insufficient memory available for setsockopt to complete.");
+			result = E_NOBUFS;
+			goto end;
+		}
+
+		else if (errno == EISCONN){
+			perror("setsockopt: The socket is already connected, and a specified option cannot be set while the socket is connected.");
+			result = E_ISCONN;
+			goto end;
+
 		}
 	}
-	listen(server_socket, 2);
 
-	int client_socket;
+	while (bind(server_socket, (struct sockaddr *) &server_address, sizeof(server_address)) != 0) {
+		if (errno == EALREADY) {
+			perror("bind: An assigment request is already in progress for the specified socket.");
+			result = E_ALREADY;
+			goto end;
+		}
+
+		else if (errno == EBADF) {
+			perror("bind: The socket argument is not a valid file descriptor.");
+			result = E_BADF;
+			goto end;
+		}
+	}
+
+	if ((listen(server_socket, 2)) != -1 ) {
+		if (errno == EBADF) {
+			perror("listen: The socket argument is not a valid file descriptor.");
+			result = E_BADF;
+			goto end;
+		}
+		if (errno == EACCES) {
+			perror("listen: The calling process does not have appropriate privileges");
+			result = E_ACCES;
+			goto end;
+		}
+		if (errno == ENOBUFS) {
+			perror("listen: Insufficient resources are available in the system to complete the call.");
+			result = E_NOBUFS;
+			goto end;
+		}
+	}
+
+	printf("Listening on %s, port %d\n", inet_ntoa(server_address.sin_addr), PORT_NUMBER);
+
 	while (1) {
-		client_socket = accept(server_socket, NULL, NULL);
-		send(client_socket, response_data, sizeof(response_data), 0);
+		size = sizeof(client_address);
+		client_socket = accept(server_socket, (struct sockaddr *) &client_address, &size);
+		printf("Client conncected from: %s\n", inet_ntoa(client_address.sin_addr));
+		send(client_socket, response_data, strlen(response_data), 0);
 		close(client_socket);
 	}
 	close(server_socket);
-	return 0;
+	result = E_SUCCESS;
+	goto end;
+
+	end: return result;
+
 }
